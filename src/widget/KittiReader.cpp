@@ -370,6 +370,7 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
 void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
   std::string ext = filename.substr(filename.size() - 3, 3);
   if (ext == "las") {
+    // TODO: adapt the pointOffset.
     pointOffset_ = -Eigen::Vector3d(534000.0, 3379900.0, 25.0);
     readPoints(filename, scan, pointOffset_);
     return;

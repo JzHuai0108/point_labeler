@@ -77,9 +77,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   tfFillTilePoints_.attach({"out_point"}, bufPoints_);
   tfFillTilePoints_.attach({"out_label"}, bufLabels_);
-  tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
+  // tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
   tfFillTilePoints_.attach({"out_rgbacolor"}, bufColors_);
-  // tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
+  tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
 
   bufSelectedLabels_.resize(maxPointsPerScan_);
   tfSelectedLabels_.attach({"out_label"}, bufSelectedLabels_);
@@ -353,6 +353,21 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     bufLabels_.resize(numCopiedPoints);
     bufVisible_.resize(numCopiedPoints);
     bufScanIndexes_.resize(numCopiedPoints);
+    // set bufVisible from bufScanIndexes
+    std::vector<glow::vec4> allIndexes;
+    bufScanIndexes_.get(allIndexes, 0, numCopiedPoints);
+    std::vector<uint32_t> vvisible;
+    vvisible.resize(numCopiedPoints);
+    for (uint32_t i = 0; i < numCopiedPoints; ++i) {
+      vvisible[i] = allIndexes[i].z;
+    }
+    if (numCopiedPoints) {
+      bufVisible_.assign(vvisible);
+      std::cout << "Front index " << allIndexes[0].x << " " << (int)allIndexes[0].y << " visible? "
+          << allIndexes[0].z << " " << allIndexes[0].w << "\nBack index "
+          << allIndexes[numCopiedPoints - 1].x << " " << (int)allIndexes[numCopiedPoints - 1].y << " visible? "
+          << allIndexes[numCopiedPoints - 1].z << " " << allIndexes[numCopiedPoints - 1].w << std::endl;
+    }
 
     // get per scan information from  scan indexes.
     scanInfos_.clear();
@@ -364,8 +379,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
     glow::_CheckGlError(__FILE__, __LINE__);
 
-    std::vector<glow::vec2> scanIndexes;
-    glow::GlBuffer<glow::vec2> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+    std::vector<glow::vec4> scanIndexes;
+    glow::GlBuffer<glow::vec4> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
     bufReadBuffer.resize(maxPointsPerScan_);
 
     ScanInfo current;
@@ -507,12 +522,12 @@ void Viewport::updateLabels() {
   if (labels_.size() == 0) return;
 
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<vec4> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   bufReadLabels.resize(maxPointsPerScan_);
   bufReadIndexes.resize(bufReadLabels.size());
 
   std::vector<uint32_t> labels(bufReadLabels.size());
-  std::vector<vec2> indexes(bufReadIndexes.size());
+  std::vector<vec4> indexes(bufReadIndexes.size());
 
   uint32_t count = 0;
   uint32_t max_size = bufReadLabels.size();
@@ -2118,7 +2133,7 @@ void Viewport::updateBoundingBoxes() {
   glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<vec4> bufReadColors{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<vec4> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
 
   bufReadPoints.resize(maxPointsPerScan_);
   bufReadColors.resize(maxPointsPerScan_);
@@ -2128,7 +2143,7 @@ void Viewport::updateBoundingBoxes() {
   std::vector<vec4> points(bufReadLabels.size());
   std::vector<vec4> colors(bufReadLabels.size());
   std::vector<uint32_t> labels(bufReadLabels.size());
-  std::vector<vec2> indexes(bufReadIndexes.size());
+  std::vector<vec4> indexes(bufReadIndexes.size());
 
   uint32_t count = 0;
   uint32_t max_size = bufReadLabels.size();
