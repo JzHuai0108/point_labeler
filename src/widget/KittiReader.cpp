@@ -370,9 +370,9 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
 void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
   std::string ext = filename.substr(filename.size() - 3, 3);
   if (ext == "las") {
-    // TODO: adapt the pointOffset.
-    pointOffset_ = -Eigen::Vector3d(534000.0, 3379900.0, 25.0);
-    readPoints(filename, scan, pointOffset_);
+    Eigen::Vector3d centroid;
+    readPoints(filename, scan, centroid);
+    pointOffset_ = centroid;
     return;
   }
 
@@ -403,7 +403,7 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
   }
 }
 
-void KittiReader::readPoints(const std::string& filename, Laserscan& scan, const Eigen::Vector3d& offset) {
+void KittiReader::readPoints(const std::string& filename, Laserscan& scan, Eigen::Vector3d& centroid) {
   LASreadOpener lasreadopener;
   lasreadopener.set_file_name(filename.c_str());
   LASreader* lasreader = lasreadopener.open();
@@ -414,10 +414,18 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan, const
   std::vector<double> values(4 * num_points);
   std::vector<Point3f> vcolors(num_points);
   size_t count = 0;
+  Eigen::Vector3d offset = Eigen::Vector3d::Zero();
+  Eigen::Vector3d cumsum = Eigen::Vector3d::Zero();
   while (lasreader->read_point()) {
-    values[4 * lasreader->p_count - 4] = lasreader->point.get_x() + offset.x();
-    values[4 * lasreader->p_count - 3] = lasreader->point.get_y() + offset.y();
-    values[4 * lasreader->p_count - 2] = lasreader->point.get_z() + offset.z();
+    if (count == 0) {
+      offset = Eigen::Vector3d(lasreader->point.get_x(), lasreader->point.get_y(), lasreader->point.get_z());
+      cumsum.setZero();
+    } else {
+      cumsum += (Eigen::Vector3d(lasreader->point.get_x(), lasreader->point.get_y(), lasreader->point.get_z()) - offset);
+    }
+    values[4 * lasreader->p_count - 4] = lasreader->point.get_x();
+    values[4 * lasreader->p_count - 3] = lasreader->point.get_y();
+    values[4 * lasreader->p_count - 2] = lasreader->point.get_z();
     values[4 * lasreader->p_count - 1] = lasreader->point.get_intensity();
     vcolors[lasreader->p_count - 1] = Uint16toFloat(&(lasreader->point));
     ++count;
@@ -427,6 +435,10 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan, const
   if (count != num_points) {
     std::cout << "Warning: read " << count << " points instead of " << num_points << std::endl;
   }
+  centroid = offset + cumsum / (double)num_points;
+  for (uint32_t i = 0; i < 3; ++i)
+    centroid[i] = std::floor(centroid[i]);
+  std::cout << "Centroid: " << centroid.transpose() << std::endl;
   std::vector<Point3f>& points = scan.points;
   std::vector<float>& remissions = scan.remissions;
   std::vector<Point3f>& colors = scan.colors;
@@ -435,9 +447,9 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan, const
   remissions.resize(num_points);
 
   for (uint32_t i = 0; i < num_points; ++i) {
-    points[i].x = values[4 * i];
-    points[i].y = values[4 * i + 1];
-    points[i].z = values[4 * i + 2];
+    points[i].x = values[4 * i] - centroid[0];
+    points[i].y = values[4 * i + 1] - centroid[1];
+    points[i].z = values[4 * i + 2] - centroid[2];
     remissions[i] = values[4 * i + 3];
     colors[i] = vcolors[i];
     if (i < 1 || i > num_points - 2) {
