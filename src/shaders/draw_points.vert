@@ -3,6 +3,7 @@
 layout (location = 0) in vec4  in_vertex;
 layout (location = 1) in uint  in_label;
 layout (location = 2) in uint  in_visible;
+layout (location = 3) in vec4  in_rgbacolor;
 
 uniform sampler2DRect label_colors;
 uniform sampler2D     heightMap;
@@ -96,6 +97,9 @@ void main()
   uint instance = (in_label >> 16) & uint(0xFFFF);
   
   vec4 in_color = texture(label_colors, vec2(label, 0));
+  if(in_label == uint(0)) {
+    in_color = in_rgbacolor;
+  }
   float in_remission = in_vertex.w;
   
   float range = length(in_vertex.xyz);

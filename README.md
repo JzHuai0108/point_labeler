@@ -54,9 +54,16 @@ Download the additional dependencies:
 ```bash
 catkin deps fetch
 ```
+build the lastools package
+```bash
+git clone --recursive git@github.com:LAStools/LAStools.git
+cd LAStools
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/media/jhuai/docker/point_labeler_ws/devel
+```
 Then, build the project:
 ```bash
-catkin build point_labeler
+catkin build point_labeler -Dlaslib_DIR=/media/jhuai/docker/point_labeler_ws/devel/lib/cmake/LASlib
 ```
 Now the project root directory (e.g. `~/catkin_ws/src/point_labeler`) should contain a `bin` directory containing the labeler.
 

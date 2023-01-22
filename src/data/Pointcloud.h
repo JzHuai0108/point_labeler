@@ -21,6 +21,7 @@ class Laserscan {
   Eigen::Matrix4f pose;
   std::vector<Point3f> points;
   std::vector<float> remissions;
+  std::vector<Point3f> colors;
 };
 
 #endif /* SRC_DATA_POINTCLOUD_H_ */

@@ -48,6 +48,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   bufPoses_.resize(maxScans_);
   bufPoints_.resize(max_size);
+  bufColors_.resize(max_size);
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
   bufScanIndexes_.resize(max_size);
@@ -56,11 +57,13 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   bufTempRemissions_.reserve(maxPointsPerScan_);
   bufTempLabels_.reserve(maxPointsPerScan_);
   bufTempVisible_.reserve(maxPointsPerScan_);
+  bufTempColors_.reserve(maxPointsPerScan_);
 
   uint32_t tempMem = bufTempPoints_.memorySize();
   tempMem += bufTempRemissions_.memorySize();
   tempMem += bufTempLabels_.memorySize();
   tempMem += bufTempVisible_.memorySize();
+  tempMem += bufTempColors_.memorySize();
 
   std::cout << "temp mem size: " << float(tempMem) / (1000 * 1000) << " MB" << std::endl;
 
@@ -75,7 +78,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   tfFillTilePoints_.attach({"out_point"}, bufPoints_);
   tfFillTilePoints_.attach({"out_label"}, bufLabels_);
   tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
-  tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
+  tfFillTilePoints_.attach({"out_rgbacolor"}, bufColors_);
+  // tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
 
   bufSelectedLabels_.resize(maxPointsPerScan_);
   tfSelectedLabels_.attach({"out_label"}, bufSelectedLabels_);
@@ -83,7 +87,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   initPrograms();
   initVertexBuffers();
 
-  drawingOption_["remission"] = true;
+  drawingOption_["remission"] = false;
   drawingOption_["color"] = false;
   drawingOption_["single scan"] = false;
   drawingOption_["show all points"] = false;
@@ -231,6 +235,7 @@ void Viewport::initVertexBuffers() {
   vao_points_.setVertexAttribute(0, bufPoints_, 4, AttributeType::FLOAT, false, sizeof(glow::vec4), nullptr);
   vao_points_.setVertexAttribute(1, bufLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
   vao_points_.setVertexAttribute(2, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
+  vao_points_.setVertexAttribute(3, bufColors_, 4, AttributeType::FLOAT, false, sizeof(glow::vec4), nullptr);
 
   vao_temp_points_.setVertexAttribute(0, bufTempPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
   vao_temp_points_.setVertexAttribute(1, bufTempRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
@@ -238,6 +243,7 @@ void Viewport::initVertexBuffers() {
                                       nullptr);
   vao_temp_points_.setVertexAttribute(3, bufTempVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t),
                                       nullptr);
+  vao_temp_points_.setVertexAttribute(4, bufTempColors_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
 
   vao_polygon_points_.setVertexAttribute(0, bufPolygonPoints_, 2, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
 
@@ -264,6 +270,7 @@ void Viewport::setMaximumScans(uint32_t numScans) {
 
   bufPoses_.resize(maxScans_);
   bufPoints_.resize(max_size);
+  bufColors_.resize(max_size);
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
   bufScanIndexes_.resize(max_size);
@@ -272,6 +279,7 @@ void Viewport::setMaximumScans(uint32_t numScans) {
   memTile += bufPoints_.memorySize();
   memTile += bufVisible_.memorySize();
   memTile += bufLabels_.memorySize();
+  memTile += bufColors_.memorySize();
   memTile += bufScanIndexes_.memorySize();
 
   std::cout << "mem size: " << float(memTile) / (1000 * 1000) << " MB" << std::endl;
@@ -306,6 +314,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     tfFillTilePoints_.begin(TransformFeedbackMode::POINTS);
 
     for (uint32_t t = 0; t < points_.size(); ++t) {
+      std::cout << "tile " << t << " of " << points_.size() << " with points " << points_[t]->size() << std::endl;
       prgFillTilePoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
       prgFillTilePoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[t]->pose));
 
@@ -327,6 +336,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
         bufTempRemissions_.assign(std::vector<float>(points_[t]->size(), 1.0f));
       bufTempLabels_.assign(*(labels_[t]));
       bufTempVisible_.assign(visible);
+      bufTempColors_.assign(points_[t]->colors);
 
       prgFillTilePoints_.setUniform(GlUniform<uint32_t>("scan", t));
 
@@ -339,6 +349,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     glDisable(GL_RASTERIZER_DISCARD);
 
     bufPoints_.resize(numCopiedPoints);
+    bufColors_.resize(numCopiedPoints);
     bufLabels_.resize(numCopiedPoints);
     bufVisible_.resize(numCopiedPoints);
     bufScanIndexes_.resize(numCopiedPoints);
@@ -2105,14 +2116,17 @@ void Viewport::updateBoundingBoxes() {
   std::cout << "updating bounding boxes. " << std::flush;
 
   glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<vec4> bufReadColors{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
 
   bufReadPoints.resize(maxPointsPerScan_);
+  bufReadColors.resize(maxPointsPerScan_);
   bufReadLabels.resize(maxPointsPerScan_);
   bufReadIndexes.resize(maxPointsPerScan_);
 
   std::vector<vec4> points(bufReadLabels.size());
+  std::vector<vec4> colors(bufReadLabels.size());
   std::vector<uint32_t> labels(bufReadLabels.size());
   std::vector<vec2> indexes(bufReadIndexes.size());
 
@@ -2137,10 +2151,12 @@ void Viewport::updateBoundingBoxes() {
 
     bufLabels_.copyTo(count * max_size, size, bufReadLabels, 0);
     bufPoints_.copyTo(count * max_size, size, bufReadPoints, 0);
+    bufColors_.copyTo(count * max_size, size, bufReadColors, 0);
     bufScanIndexes_.copyTo(count * max_size, size, bufReadIndexes, 0);
 
     bufReadLabels.get(labels, 0, size);
     bufReadPoints.get(points, 0, size);
+    bufReadColors.get(colors, 0, size);
     bufReadIndexes.get(indexes, 0, size);
 
     for (uint32_t i = 0; i < size; ++i) {

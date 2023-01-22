@@ -70,6 +70,7 @@ class KittiReader {
 
  protected:
   void readPoints(const std::string& filename, Laserscan& scan);
+  void readPoints(const std::string& filename, Laserscan& scan, const Eigen::Vector3d& offset);
   void readLabels(const std::string& filename, std::vector<uint32_t>& labels);
   void readPoses(const std::string& filename, std::vector<Eigen::Matrix4f>& poses);
 
@@ -92,7 +93,7 @@ class KittiReader {
   std::vector<Tile> tiles_;
   Eigen::Vector2f offset_;
   Eigen::Vector2i numTiles_;
-
+  Eigen::Vector3d pointOffset_;
   std::vector<Eigen::Vector2f> trajectory_;
 
   std::map<uint32_t, uint32_t> maxInstanceIds_;
