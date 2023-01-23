@@ -100,7 +100,9 @@ When loading a dataset, the data must be organized as follows:
 <pre>
 point cloud folder
 ├── velodyne/             -- directory containing ".bin" files with Velodyne point clouds.   
-├── labels/   [optional]  -- label directory, will be generated if not present.  
+├── labels/   [optional]  -- label directory, will be generated if not present. Each label file contains the labels for each scan in each sequence. 
+Each .label file contains a uint32 label for each point in the corresponding .bin scan. 
+See [laserscan.py](https://github.com/PRBonn/semantic-kitti-api/blob/master/auxiliary/laserscan.py) to see how the labels are read.
 ├── image_2/  [optional]  -- directory containing ".png" files from the color   camera.  
 ├── calib.txt             -- calibration of velodyne vs. camera. needed for projection of point cloud into camera.  
 └── poses.txt             -- file containing the poses of every scan.

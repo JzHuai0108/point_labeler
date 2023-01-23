@@ -314,7 +314,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     tfFillTilePoints_.begin(TransformFeedbackMode::POINTS);
 
     for (uint32_t t = 0; t < points_.size(); ++t) {
-      std::cout << "tile " << t << " of " << points_.size() << " with points " << points_[t]->size() << std::endl;
+      std::cout << "scan " << t << " of " << points_.size() << " with points " << points_[t]->size() << std::endl;
       prgFillTilePoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
       prgFillTilePoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[t]->pose));
 
