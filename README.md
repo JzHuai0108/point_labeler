@@ -59,17 +59,24 @@ build the lastools package
 git clone --recursive git@github.com:LAStools/LAStools.git
 cd LAStools
 mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/media/jhuai/docker/point_labeler_ws/devel
+cmake .. -DCMAKE_INSTALL_PREFIX=/media/jhuai/docker/catkin_ws/devel
 make -j4
 ```
 Then, build the project:
 ```bash
-catkin build point_labeler -Dlaslib_DIR=/media/jhuai/docker/point_labeler_ws/devel/lib/cmake/LASlib
+catkin build point_labeler -Dlaslib_DIR=/media/jhuai/docker/catkin_ws/devel/lib/cmake/LASlib
 ```
 Now the project root directory (e.g. `~/catkin_ws/src/point_labeler`) should contain a `bin` directory containing the labeler.
 
 
 ## Usage
+
+Download a sample segment, e.g., seg2.zip, uncompress to a folder.
+```
+cd bin/
+./labeler
+```
+Open the seg2 folder, then label the points according to the [wiki](https://github.com/jbehley/point_labeler/wiki) instructions.
 
 
 In the `bin` directory, just run `./labeler` to start the labeling tool. 
