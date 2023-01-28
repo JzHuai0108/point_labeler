@@ -132,3 +132,5 @@ endif()
 
 target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} LASlib pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
 
+add_executable(setlaslabel src/setlaslabel.cpp)
+target_link_libraries(setlaslabel LASlib)

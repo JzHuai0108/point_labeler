@@ -60,6 +60,7 @@ git clone --recursive git@github.com:LAStools/LAStools.git
 cd LAStools
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/media/jhuai/docker/point_labeler_ws/devel
+make -j4
 ```
 Then, build the project:
 ```bash
