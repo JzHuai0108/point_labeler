@@ -42,6 +42,7 @@
 #include <fstream>
 #include <vector>
 
+#include "data/label_utils.h"
 #include "lasreader.hpp"
 #include "laswriter.hpp"
 
@@ -93,9 +94,50 @@ void readLabels(const std::string& filename, std::vector<uint32_t>& labels) {
   in.close();
 }
 
-void remapLabels(std::vector<uint32_t>& labels, const std::vector<uint32_t>& remap) {
+void remapLabels(std::vector<uint32_t>& labels, const std::map<uint32_t, uint32_t>& remap) {
   for (uint32_t i = 0; i < labels.size(); ++i) {
-    labels[i] = remap[labels[i]];
+    const auto it = remap.find(labels[i]);
+    if (it != remap.end()) {
+      labels[i] = it->second;
+    } else {
+      labels[i] = 0;
+      std::cerr << "Label " << labels[i] << " not found in remap. " << std::endl;
+    }
+  }
+}
+
+std::map<std::string, uint32_t> semReduced{
+  {"unlabeled", 0},
+  {"agent", 11},
+  {"ground", 2},
+  {"vegetation", 4},
+  {"structure", 6},
+};
+
+std::map<std::string, std::string> semKitti2semReduced{
+{"unlabeled", "unlabeled"},
+{"motorcycle", "agent"},
+{"person", "agent"},
+{"car", "agent"},
+{"road", "ground"},
+{"other-ground", "ground"}, // other ground may include some other-structure.
+{"vegetation", "vegetation"},
+{"trunk", "vegetation"}, // trunk includes trees.
+{"pole", "structure"}, 
+{"other-structure", "structure"}, // other structure includes lamp and levee.
+{"building", "structure"},
+{"fence", "structure"},
+};
+
+void constructSemReduced2SemKitti(const std::string &labelxml, std::map<uint32_t, uint32_t> &semKittiId2semReducedId) {
+  std::map<uint32_t, std::string> label_names;
+  getLabelNames(labelxml, label_names);
+  std::map<std::string, uint32_t> semKitti;
+  for (auto it = label_names.begin(); it != label_names.end(); ++it) {
+    semKitti[it->second] = it->first;
+  }
+  for (auto it = semKitti2semReduced.begin(); it != semKitti2semReduced.end(); ++it) {
+    semKittiId2semReducedId[semKitti[it->first]] = semReduced[it->second];
   }
 }
 
@@ -204,15 +246,15 @@ int main(int argc, char *argv[])
   std::vector<uint32_t> labels;
   readLabels(labelfile, labels);
   std::cout << "Load " << labels.size() << " labels from " << labelfile << std::endl;
-  if (labels.size() != num_points) 
+  if (labels.size() != (size_t)num_points) 
   {
     std::cerr << "Number of labels does not match number of points!" << std::endl;
     return 1;
   }
-  std::vector<uint32_t> remap;
-  remap.reserve(256);
-  for (uint32_t i = 0; i < 256; ++i) remap.push_back(i);
-  remapLabels(labels, remap);
+
+  std::map<uint32_t, uint32_t> semKittiId2semReducedId;
+  constructSemReduced2SemKitti("labels.xml", semKittiId2semReducedId);
+  remapLabels(labels, semKittiId2semReducedId);
 
   // where there is a point to read
   size_t idx = 0;
@@ -231,7 +273,7 @@ int main(int argc, char *argv[])
     laswriter->update_inventory(&lasreader->point);
     idx++;
   }
-  if (idx != num_points) 
+  if (idx != (size_t)num_points) 
   {
     std::cerr << "Number of points read does not match number of points!" << std::endl;
     return 1;
