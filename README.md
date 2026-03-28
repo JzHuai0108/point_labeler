@@ -20,7 +20,7 @@
 * boost >= 1.54
 * QT >= 5.2
 * OpenGL Core Profile >= 4.0
-* [glow](https://github.com/jbehley/glow) (catkin package)
+* [glow](https://github.com/jbehley/glow) (catkin package) commit: e66d7f855514baed8dca0d1b82d7a51151c9eef3
  
 ## Build
   
@@ -57,9 +57,10 @@ catkin deps fetch
 build the lastools package
 ```bash
 git clone --recursive git@github.com:LAStools/LAStools.git
+git checkout 3ac4f39bb81c36614823d4652e932eeef16c9d73
 cd LAStools
 mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/media/jhuai/docker/catkin_ws/devel
+cmake .. -DCMAKE_INSTALL_PREFIX=/media/jhuai/docker/catkin_ws/devel -DCMAKE_POLICY_VERSION_MINIMUM=3.5 
 make -j4
 ```
 Then, build the project:

@@ -84,8 +84,24 @@ vec3 jet(float v)
 
     int idx = int(min(v * 9, 9.0));
     float alpha = v * 9 - idx;
-    
+
     return mix(interval_colors[max(0, idx-1)], interval_colors[idx], alpha);
+}
+
+// CloudCompare-style rainbow: blue -> cyan -> green -> yellow -> red
+vec3 rainbow(float v)
+{
+    const vec3 interval_colors[] = vec3[](vec3(0.0, 0.0, 1.0),
+        vec3(0.0, 1.0, 1.0),
+        vec3(0.0, 1.0, 0.0),
+        vec3(1.0, 1.0, 0.0),
+        vec3(1.0, 0.0, 0.0));
+
+    float x = clamp(v, 0.0, 1.0) * 4.0;
+    int idx = int(min(x, 3.0));
+    float alpha = x - float(idx);
+
+    return mix(interval_colors[idx], interval_colors[idx + 1], alpha);
 }
 
 
@@ -160,6 +176,10 @@ void main()
         else if(colormap == 3)
         {
           color = vec4(jet(in_remission), 1.0);
+        }
+        else if(colormap == 4)
+        {
+          color = vec4(rainbow(in_remission), 1.0);
         }
         else
         {

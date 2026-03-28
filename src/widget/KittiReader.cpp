@@ -446,11 +446,22 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan, Eigen
   points.resize(num_points);
   remissions.resize(num_points);
 
+  double min_intensity = std::numeric_limits<double>::max();
+  double max_intensity = std::numeric_limits<double>::lowest();
+  for (uint32_t i = 0; i < num_points; ++i) {
+    double v = values[4 * i + 3];
+    if (v < min_intensity) min_intensity = v;
+    if (v > max_intensity) max_intensity = v;
+  }
+  double intensity_range = max_intensity - min_intensity;
+  if (intensity_range < 1.0) intensity_range = 1.0;
+  std::cout << "Intensity range: [" << min_intensity << ", " << max_intensity << "]" << std::endl;
+
   for (uint32_t i = 0; i < num_points; ++i) {
     points[i].x = values[4 * i] - centroid[0];
     points[i].y = values[4 * i + 1] - centroid[1];
     points[i].z = values[4 * i + 2] - centroid[2];
-    remissions[i] = values[4 * i + 3];
+    remissions[i] = (values[4 * i + 3] - min_intensity) / intensity_range;
     colors[i] = vcolors[i];
     if (i < 1 || i > num_points - 2) {
       std::cout << "Point " << i << ": " << points[i].x << " " << points[i].y 

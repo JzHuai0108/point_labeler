@@ -324,7 +324,12 @@
               </item>
               <item>
                <property name="text">
-                <string>jet</string>
+                <string>Jet</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Rainbow (Blue-Red)</string>
                </property>
               </item>
              </widget>
