@@ -224,6 +224,7 @@ class Viewport : public QGLWidget {
   int32_t mFlags;
 
   uint32_t mCurrentLabel;
+  uint32_t mCurrentStrokeLabel_{0};  // mCurrentLabel with auto-assigned instance ID for current stroke
   float mRadius;
   std::vector<uint32_t> mFilteredLabels;
 

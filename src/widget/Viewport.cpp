@@ -559,7 +559,10 @@ void Viewport::updateLabels() {
 
 void Viewport::setRadius(float value) { mRadius = value; }
 
-void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
+void Viewport::setLabel(uint32_t label) {
+  mCurrentLabel = label;
+  mCurrentStrokeLabel_ = label;  // reset stroke label; new instance ID assigned on next press
+}
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
@@ -1236,9 +1239,16 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     if (mMode == PAINT) {
       buttonPressed = true;
       mChangeCamera = false;
-      if (event->buttons() & Qt::LeftButton)
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-      else if (event->buttons() & Qt::RightButton)
+      if (event->buttons() & Qt::LeftButton) {
+        bool isInstanceable = std::find(instanceableLabels_.begin(), instanceableLabels_.end(), mCurrentLabel) != instanceableLabels_.end();
+        if (isInstanceable) {
+          maxInstanceIds_[mCurrentLabel]++;
+          mCurrentStrokeLabel_ = (maxInstanceIds_[mCurrentLabel] << 16) | mCurrentLabel;
+        } else {
+          mCurrentStrokeLabel_ = mCurrentLabel;
+        }
+        labelPoints(event->x(), event->y(), mRadius, mCurrentStrokeLabel_, false);
+      } else if (event->buttons() & Qt::RightButton)
         labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
       updateGL();
@@ -1305,7 +1315,14 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
           bufTriangles_.assign(tris_verts);
 
-          labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+          bool isInstanceable = std::find(instanceableLabels_.begin(), instanceableLabels_.end(), mCurrentLabel) != instanceableLabels_.end();
+          if (isInstanceable) {
+            maxInstanceIds_[mCurrentLabel]++;
+            mCurrentStrokeLabel_ = (maxInstanceIds_[mCurrentLabel] << 16) | mCurrentLabel;
+          } else {
+            mCurrentStrokeLabel_ = mCurrentLabel;
+          }
+          labelPoints(event->x(), event->y(), 0, mCurrentStrokeLabel_, false);
         }
 
         polygonPoints_.clear();
@@ -1460,7 +1477,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
     if (mMode == PAINT) {
       if (buttonPressed) {
         if (event->buttons() & Qt::LeftButton)
-          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+          labelPoints(event->x(), event->y(), mRadius, mCurrentStrokeLabel_, false);
         else
           labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
       }
